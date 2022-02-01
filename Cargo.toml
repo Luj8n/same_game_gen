@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 rayon = "1.5.1"
+fastrand = "1.7.0"
+itertools = "0.10.3"
