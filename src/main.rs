@@ -1,8 +1,9 @@
 use itertools::Itertools;
 use rayon::prelude::*;
 
-const SIZE: usize = 8;
-const COLOR_COUNT: usize = 8;
+const COLOR_COUNT: usize = 10;
+const SIZE: usize = 10;
+
 const MIN_CONNECTED: usize = 2;
 
 #[derive(Clone, Copy)]
@@ -17,12 +18,6 @@ impl Default for Square {
       color: 0,
       enabled: true,
     }
-  }
-}
-
-impl Square {
-  fn new(color: usize) -> Self {
-    Square { color, enabled: true }
   }
 }
 
@@ -203,70 +198,84 @@ impl Game {
 }
 
 fn main() {
-  let rng = fastrand::Rng::new();
+  // let rng = fastrand::Rng::new();
+  // let rng = fastrand::Rng::with_seed(69420);
+
   let mut levels: Vec<(Game, Vec<(usize, usize)>)> = vec![];
 
   while levels.len() < 1 {
-    let mut squares = [[Square::default(); SIZE]; SIZE];
-    let mut used_colors = [false; COLOR_COUNT];
+    let mut some_levels: Vec<(Game, Vec<(usize, usize)>)> = (0..200000)
+      .par_bridge()
+      .filter_map(|_| {
+        let mut squares = [[Square::default(); SIZE]; SIZE];
+        let mut used_colors = [false; COLOR_COUNT];
 
-    for y in 0..SIZE {
-      for x in 0..SIZE {
-        let color = rng.usize(0..COLOR_COUNT);
-        used_colors[color] = true;
+        for y in 0..SIZE {
+          for x in 0..SIZE {
+            let color = fastrand::usize(0..COLOR_COUNT);
+            used_colors[color] = true;
 
-        squares[y][x].color = color;
-      }
+            squares[y][x].color = color;
+          }
+        }
+
+        let mut all_colors_used = true;
+
+        for i in 0..COLOR_COUNT {
+          if !used_colors[i] {
+            all_colors_used = false;
+            break;
+          }
+        }
+
+        if !all_colors_used {
+          return None;
+        }
+
+        let mut game = Game::new(squares);
+        let game_save = game.clone();
+
+        let mut clicks: Vec<(usize, usize)> = vec![];
+        let mut tries = 0_usize;
+
+        while clicks.len() < (SIZE * SIZE) / MIN_CONNECTED && tries < SIZE * SIZE {
+          let x = fastrand::usize(0..SIZE);
+          let y = fastrand::usize(0..SIZE);
+
+          let removed = game.click(x, y);
+
+          if !removed {
+            tries += 1;
+            continue;
+          }
+
+          tries = 0;
+          clicks.push((x, y));
+
+          game.move_down();
+          game.move_right();
+
+          // println!("{}", game.to_string());
+          // println!("-------------");
+
+          if game.game_won() {
+            return Some((game_save, clicks));
+          }
+        }
+
+        None
+      })
+      .collect();
+    levels.append(&mut some_levels);
+  }
+
+  for (game, clicks) in levels.iter().take(1) {
+    println!("{} {}", SIZE, clicks.len());
+    println!("{}", game.to_string());
+    for (x, y) in clicks {
+      println!("{} {}", x, y);
     }
 
-    let mut all_colors_used = true;
-
-    for i in 0..COLOR_COUNT {
-      if !used_colors[i] {
-        all_colors_used = false;
-        break;
-      }
-    }
-
-    if !all_colors_used {
-      continue;
-    }
-
-    let mut game = Game::new(squares);
-    let game_save = game.clone();
-
-    let mut game_won = false;
-    let mut clicks: Vec<(usize, usize)> = vec![];
-    let mut tries = 0_usize;
-
-    while clicks.len() < (SIZE * SIZE) / MIN_CONNECTED && tries < SIZE * SIZE {
-      let x = rng.usize(0..SIZE);
-      let y = rng.usize(0..SIZE);
-
-      let removed = game.click(x, y);
-
-      if !removed {
-        tries += 1;
-        continue;
-      }
-
-      tries = 0;
-      clicks.push((x, y));
-
-      game.move_down();
-      game.move_right();
-
-      // println!("{}", game.to_string());
-      // println!("-------------");
-
-      if game.game_won() {
-        game_won = true;
-        break;
-      }
-    }
-
-    if game_won {
-      levels.push((game_save, clicks));
-    }
+    // println!("-------------------");
   }
 }
