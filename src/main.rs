@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use rayon::prelude::*;
 
-const COLOR_COUNT: usize = 10;
-const SIZE: usize = 10;
+const COLOR_COUNT: usize = 5;
+const SIZE: usize = 5;
 
 const MIN_CONNECTED: usize = 2;
 
